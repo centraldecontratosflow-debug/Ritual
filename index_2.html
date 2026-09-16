@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAV Resorts · Dashboard Ritual 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B306B;--navy2:#0d3a80;
+  --bronze:#A57A4C;--bronze2:#c49660;
+  --cream:#FEF9E0;--cream2:#f0e8c8;
+  --white:#ffffff;--text:#2c2c2c;--tl:#6b6b6b;
+  --border:#e0d8b8;
+  --green:#2e7d32;--green2:#e8f5e9;
+  --amber:#e65100;--amber2:#fff3e0;
+  --blue:#1565c0;--blue2:#e3f2fd;
+  --red:#c62828;--red2:#ffebee;
+  --purple:#6a1b9a;--purple2:#f3e5f5;
+  --shadow:0 2px 12px rgba(11,48,107,.1);
+  --r:12px;
+}
+html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);color:var(--text)}
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* ── Header ── */
+.hdr{background:var(--navy);color:var(--cream);padding:0 28px;display:flex;align-items:center;gap:14px;height:60px;flex-shrink:0;border-bottom:3px solid var(--bronze)}
+.hdr-logo{width:36px;height:36px;background:var(--bronze);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:var(--cream);flex-shrink:0}
+.hdr-title{font-family:'Fraunces',serif;font-size:18px;font-weight:600}
+.hdr-sub{font-size:10px;font-weight:600;color:var(--bronze2);letter-spacing:1px;text-transform:uppercase}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+#last-update{font-size:11px;color:rgba(254,249,224,.6)}
+.btn-ref{background:transparent;border:1px solid var(--bronze);color:var(--bronze2);padding:5px 14px;border-radius:20px;font-family:'Raleway',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-ref:hover{background:var(--bronze);color:var(--cream)}
+
+/* ── Date filter bar ── */
+.dbar{background:var(--navy);padding:0 28px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid rgba(165,122,76,.3)}
+.dlbl{font-size:11px;font-weight:600;color:rgba(254,249,224,.5);text-transform:uppercase;letter-spacing:1px}
+.dt-input{background:rgba(255,255,255,.08);border:1px solid rgba(165,122,76,.4);color:var(--cream);padding:5px 10px;border-radius:8px;font-family:'Raleway',sans-serif;font-size:12px;font-weight:500;cursor:pointer;outline:none}
+.dt-input::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.6);cursor:pointer}
+.dt-input:focus{border-color:var(--bronze2)}
+.btn-apply{background:var(--bronze);border:none;color:var(--cream);padding:5px 16px;border-radius:20px;font-family:'Raleway',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-apply:hover{background:var(--bronze2)}
+.btn-clear{background:transparent;border:1px solid rgba(165,122,76,.35);color:rgba(254,249,224,.6);padding:5px 14px;border-radius:20px;font-family:'Raleway',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-clear:hover{border-color:var(--bronze2);color:var(--cream)}
+.loading-bar{display:none;align-items:center;gap:8px;font-size:11px;color:var(--bronze2)}
+.spin{width:14px;height:14px;border:2px solid rgba(165,122,76,.3);border-top-color:var(--bronze2);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Tab bar ── */
+.tbar{background:var(--white);border-bottom:2px solid var(--border);padding:0 28px;display:flex}
+.tbtn{font-family:'Raleway',sans-serif;font-size:13px;font-weight:600;color:var(--tl);padding:13px 20px 11px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tbtn.active{color:var(--navy);border-bottom-color:var(--bronze)}
+.tbtn:hover:not(.active){color:var(--navy)}
+
+/* ── Main ── */
+.main{flex:1;padding:24px 28px;overflow:auto}
+.panel{display:none}.panel.active{display:block}
+.stitle{font-family:'Fraunces',serif;font-size:12px;font-weight:600;color:var(--bronze);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.stitle::after{content:'';flex:1;height:1px;background:linear-gradient(to right,var(--border),transparent)}
+
+/* ── KPI cards ── */
+.krow{display:grid;gap:12px;margin-bottom:20px}
+.k4{grid-template-columns:repeat(4,1fr)}
+.k3{grid-template-columns:repeat(3,1fr)}
+.k2{grid-template-columns:repeat(2,1fr)}
+.kcard{background:var(--white);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);border-left:4px solid var(--navy);transition:transform .15s}
+.kcard:hover{transform:translateY(-2px)}
+.kcard.gr{border-left-color:var(--green)}
+.kcard.br{border-left-color:var(--bronze)}
+.kcard.am{border-left-color:#f59e0b}
+.kcard.bl{border-left-color:var(--blue)}
+.kcard.pu{border-left-color:var(--purple)}
+.klbl{font-size:11px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.9px;margin-bottom:5px}
+.kval{font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--navy);line-height:1}
+.kcard.gr .kval{color:var(--green)}
+.kcard.br .kval{color:var(--bronze)}
+.kcard.am .kval{color:#92400e}
+.kcard.bl .kval{color:var(--blue)}
+.kcard.pu .kval{color:var(--purple)}
+
+/* ── Pendências cards com lista de prospects ── */
+.prow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.pcard{background:var(--white);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);border-top:3px solid transparent}
+.pcard.ap0{border-top-color:var(--green)}
+.pcard.ap1{border-top-color:#f59e0b}
+.pcard.ap2{border-top-color:var(--amber)}
+.pcard.ap3{border-top-color:var(--blue)}
+.pnum{font-family:'Fraunces',serif;font-size:32px;font-weight:700;line-height:1;text-align:center}
+.pcard.ap0 .pnum{color:var(--green)}
+.pcard.ap1 .pnum{color:#92400e}
+.pcard.ap2 .pnum{color:var(--amber)}
+.pcard.ap3 .pnum{color:var(--blue)}
+.pname{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--tl);margin:5px 0 8px;text-align:center}
+.prospect-list{max-height:180px;overflow-y:auto;border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px}
+.prospect-list::-webkit-scrollbar{width:4px}
+.prospect-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.pi{padding:4px 6px;background:var(--cream);border-radius:6px}
+.pi-name{font-size:11px;font-weight:600;color:var(--text)}
+.pi-sala{font-size:10px;color:var(--tl)}
+.pi-data{font-size:10px;color:var(--bronze);font-weight:500}
+.pi-empty{font-size:11px;color:var(--tl);font-style:italic;text-align:center;padding:8px 0}
+
+/* ── Charts ── */
+.cgrid{display:grid;gap:16px;margin-bottom:20px}
+.cg311{grid-template-columns:3fr 1.6fr 1.6fr}
+.cg21{grid-template-columns:2fr 1.2fr}
+.cg12{grid-template-columns:1.2fr 2fr}
+.ccard{background:var(--white);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.ctitle{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:14px}
+.cwrap{position:relative}.cwrap.bar{height:240px}.cwrap.dnt{height:210px}
+
+/* ── Tipo section blocks ── */
+.tipo-block{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+.tipo-header{padding:14px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border)}
+.tipo-badge{font-family:'Fraunces',serif;font-size:22px;font-weight:700;min-width:60px;line-height:1}
+.tipo-badge.aud{color:var(--navy)}
+.tipo-badge.pv{color:var(--purple)}
+.tipo-badge.re{color:var(--amber)}
+.tipo-htitle{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--text)}
+.tipo-htotal{font-size:11px;color:var(--tl);font-weight:600;margin-top:2px}
+.tipo-body{padding:16px 20px}
+.tipo-status-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.scard{border-radius:10px;padding:12px 14px;text-align:center}
+.scard.sc-con{background:var(--green2);border:1px solid #a5d6a7}
+.scard.sc-and{background:var(--amber2);border:1px solid #ffcc80}
+.scard.sc-des{background:var(--blue2);border:1px solid #90caf9}
+.scard.sc-pag{background:var(--red2);border:1px solid #ef9a9a}
+.sc-num{font-family:'Fraunces',serif;font-size:26px;font-weight:700}
+.sc-con .sc-num{color:var(--green)}
+.sc-and .sc-num{color:var(--amber)}
+.sc-des .sc-num{color:var(--blue)}
+.sc-pag .sc-num{color:var(--red)}
+.sc-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;color:var(--tl)}
+.incons-section{margin-top:12px}
+.incons-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--tl);margin-bottom:8px}
+.incons-list{display:flex;flex-direction:column;gap:5px;max-height:160px;overflow-y:auto}
+.incons-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--purple2);border-radius:7px}
+.incons-key{font-size:12px;font-weight:600;color:var(--purple)}
+.incons-cnt{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:var(--purple)}
+.val-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.val-card{padding:12px 14px;border-radius:10px;background:var(--cream2);border:1px solid var(--border)}
+.val-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tl);margin-bottom:4px}
+.val-num{font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--navy)}
+
+/* ── Badges ── */
+.blv{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green);background:var(--green2);padding:3px 10px;border-radius:20px}
+.blv::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+.bdm{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#7c4700;background:#fff3cd;padding:3px 10px;border-radius:20px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .k4,.prow,.cg311{grid-template-columns:repeat(2,1fr)}
+  .cg21,.cg12{grid-template-columns:1fr}
+  .tipo-status-row{grid-template-columns:repeat(2,1fr)}
+  .hdr,.dbar,.tbar,.main{padding-left:16px;padding-right:16px}
+}
+@media(max-width:540px){
+  .k4,.k3,.prow{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="hdr">
+  <div class="hdr-logo">G</div>
+  <div>
+    <div class="hdr-title">GAV Resorts</div>
+    <div class="hdr-sub">Dashboard · Ritual 2026</div>
+  </div>
+  <div class="hdr-right">
+    <span id="last-update">Carregando…</span>
+    <button class="btn-ref" onclick="applyFilter()">↺ Atualizar</button>
+  </div>
+</header>
+
+<!-- Date filter bar -->
+<div class="dbar">
+  <span class="dlbl">De</span>
+  <input type="date" id="dt-from" class="dt-input">
+  <span class="dlbl">Até</span>
+  <input type="date" id="dt-to" class="dt-input">
+  <button class="btn-apply" onclick="applyFilter()">Aplicar</button>
+  <button class="btn-clear" onclick="clearFilter()">Limpar</button>
+  <div class="loading-bar" id="loading-bar">
+    <div class="spin"></div>
+    <span>Buscando dados…</span>
+  </div>
+</div>
+
+<nav class="tbar">
+  <button class="tbtn active" onclick="setTab('central',this)">Central de Contratos</button>
+  <button class="tbtn" onclick="setTab('backlog',this)">Backlog</button>
+</nav>
+
+<main class="main">
+
+  <!-- ── CENTRAL DE CONTRATOS ── -->
+  <div class="panel active" id="tab-central">
+
+    <div class="stitle">Visão Geral</div>
+    <div class="krow k4">
+      <div class="kcard"><div class="klbl">Total Prospects</div><div class="kval" id="kv-tot">–</div></div>
+      <div class="kcard gr"><div class="klbl">Vendidas</div><div class="kval" id="kv-vnd">–</div></div>
+      <div class="kcard br"><div class="klbl">Confirmadas</div><div class="kval" id="kv-con">–</div></div>
+      <div class="kcard am"><div class="klbl">Taxa Conversão</div><div class="kval" id="kv-tx">–</div></div>
+    </div>
+
+    <div class="stitle">Pendências e Prospects</div>
+    <div class="prow">
+      <div class="pcard ap0">
+        <div class="pnum" id="pv-ap0">–</div>
+        <div class="pname">Aprovado</div>
+      </div>
+      <div class="pcard ap1">
+        <div class="pnum" id="pv-ap1">–</div>
+        <div class="pname">Aprovar</div>
+        <div class="prospect-list" id="pl-aprovar"><div class="pi-empty">–</div></div>
+      </div>
+      <div class="pcard ap2">
+        <div class="pnum" id="pv-ap2">–</div>
+        <div class="pname">Backlog</div>
+        <div class="prospect-list" id="pl-backlog"><div class="pi-empty">–</div></div>
+      </div>
+      <div class="pcard ap3">
+        <div class="pnum" id="pv-ap3">–</div>
+        <div class="pname">Assinatura</div>
+        <div class="prospect-list" id="pl-assinatura"><div class="pi-empty">–</div></div>
+      </div>
+    </div>
+
+    <div class="stitle">Análise por Sala e Status</div>
+    <div class="cgrid cg311">
+      <div class="ccard">
+        <div class="ctitle">Prospects por Sala de Vendas</div>
+        <div class="cwrap bar"><canvas id="ch-sala-c"></canvas></div>
+      </div>
+      <div class="ccard">
+        <div class="ctitle">Status da Proposta</div>
+        <div class="cwrap dnt"><canvas id="ch-status"></canvas></div>
+      </div>
+      <div class="ccard">
+        <div class="ctitle">Distribuição Pendências</div>
+        <div class="cwrap dnt"><canvas id="ch-pend"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BACKLOG ── -->
+  <div class="panel" id="tab-backlog">
+
+    <div class="stitle">Resumo Geral</div>
+    <div class="krow k4">
+      <div class="kcard"><div class="klbl">Total Solicitações</div><div class="kval" id="bk-tot">–</div></div>
+      <div class="kcard gr"><div class="klbl">Valor Restituído</div><div class="kval" id="bk-rst">–</div></div>
+      <div class="kcard br"><div class="klbl">VGV</div><div class="kval" id="bk-vgv">–</div></div>
+      <div class="kcard am"><div class="klbl">Taxa Conclusão</div><div class="kval" id="bk-tx">–</div></div>
+    </div>
+
+    <!-- Auditoria -->
+    <div class="tipo-block">
+      <div class="tipo-header">
+        <div>
+          <div class="tipo-badge aud" id="aud-tot">–</div>
+        </div>
+        <div>
+          <div class="tipo-htitle">Auditoria</div>
+          <div class="tipo-htotal" id="aud-sub">solicitações</div>
+        </div>
+      </div>
+      <div class="tipo-body">
+        <div class="tipo-status-row">
+          <div class="scard sc-con"><div class="sc-num" id="aud-con">–</div><div class="sc-lbl">Concluído</div></div>
+          <div class="scard sc-and"><div class="sc-num" id="aud-and">–</div><div class="sc-lbl">Em Andamento</div></div>
+          <div class="scard sc-des"><div class="sc-num" id="aud-des">–</div><div class="sc-lbl">A Designar</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pós Vendas -->
+    <div class="tipo-block">
+      <div class="tipo-header">
+        <div>
+          <div class="tipo-badge pv" id="pv-tot">–</div>
+        </div>
+        <div>
+          <div class="tipo-htitle">Pós Vendas</div>
+          <div class="tipo-htotal" id="pv-sub">solicitações</div>
+        </div>
+      </div>
+      <div class="tipo-body">
+        <div class="tipo-status-row">
+          <div class="scard sc-con"><div class="sc-num" id="pv-con">–</div><div class="sc-lbl">Concluído</div></div>
+          <div class="scard sc-and"><div class="sc-num" id="pv-and">–</div><div class="sc-lbl">Em Andamento</div></div>
+          <div class="scard sc-des"><div class="sc-num" id="pv-des">–</div><div class="sc-lbl">A Designar</div></div>
+        </div>
+        <div class="incons-section">
+          <div class="incons-title">Inconsistências</div>
+          <div class="incons-list" id="pv-incons">
+            <div class="pi-empty">Sem dados</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reembolso / Estorno -->
+    <div class="tipo-block">
+      <div class="tipo-header">
+        <div>
+          <div class="tipo-badge re" id="re-tot">–</div>
+        </div>
+        <div>
+          <div class="tipo-htitle">Reembolso / Estorno</div>
+          <div class="tipo-htotal" id="re-sub">solicitações</div>
+        </div>
+      </div>
+      <div class="tipo-body">
+        <div class="tipo-status-row">
+          <div class="scard sc-con"><div class="sc-num" id="re-con">–</div><div class="sc-lbl">Concluído</div></div>
+          <div class="scard sc-and"><div class="sc-num" id="re-and">–</div><div class="sc-lbl">Em Andamento</div></div>
+          <div class="scard sc-pag"><div class="sc-num" id="re-pag">–</div><div class="sc-lbl">A Pagar</div></div>
+        </div>
+        <div class="val-row">
+          <div class="val-card"><div class="val-lbl">Valor Restituído</div><div class="val-num" id="re-rst">–</div></div>
+          <div class="val-card"><div class="val-lbl">VGV</div><div class="val-num" id="re-vgv">–</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart por sala -->
+    <div class="stitle">Solicitações por Sala</div>
+    <div class="cgrid cg21">
+      <div class="ccard">
+        <div class="ctitle">Por Sala de Vendas</div>
+        <div class="cwrap bar"><canvas id="ch-sala-b"></canvas></div>
+      </div>
+      <div class="ccard">
+        <div class="ctitle">Por Tipo</div>
+        <div class="cwrap dnt"><canvas id="ch-tipo"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const URL_GAS = 'https://script.google.com/macros/s/AKfycbxnXvwk5ECjPuCltSOatfOPv6-8vsWchcHYTat5nqk3_Oa80cXiGWec-Dhk2oQx1eNP/exec';
+
+// ── State ─────────────────────────────────────────────────────
+let currentData = null;
+let CH = {};
+const sessionCache = new Map(); // cache por range dentro da sessão
+
+// ── Demo data ─────────────────────────────────────────────────
+const DEMO = {
+  central:{
+    totalProspects:39251,vendidas:39194,confirmadas:57,
+    pendencias:{Aprovado:39104,Aprovar:23,Backlog:1,Assinatura:1},
+    statusProposta:{Vendida:39194,Confirmada:57},
+    porSala:{'Porto 2 Life Hotel':6425,'Gramado - Dia':2903,'Salinas Maragogi':2744,'Hotel Lacqua':2439,'Campo Grande':2102,'Recife':1987,'Fortaleza':1823,'Manaus':1654,'Belém':1543,'Curitiba':1432},
+    detalhes:{
+      Aprovar:[
+        {prospect:'Ana Clara Melo',sala:'Porto 2 Life Hotel',data:'12/08/2026'},
+        {prospect:'Bruno Farias',sala:'Gramado - Dia',data:'03/09/2026'},
+        {prospect:'Carla Nascimento',sala:'Salinas Maragogi',data:'28/07/2026'},
+        {prospect:'Daniel Souza',sala:'Hotel Lacqua',data:'15/08/2026'},
+        {prospect:'Elisa Tavares',sala:'Campo Grande',data:'01/09/2026'},
+        {prospect:'Felipe Alves',sala:'Recife',data:'22/08/2026'},
+        {prospect:'Gabriela Torres',sala:'Fortaleza',data:'10/09/2026'},
+        {prospect:'Henrique Lima',sala:'Porto 2 Life Hotel',data:'05/09/2026'},
+        {prospect:'Isabela Ferreira',sala:'Manaus',data:'30/08/2026'},
+        {prospect:'Jonas Pires',sala:'Belém',data:'18/08/2026'},
+        {prospect:'Karen Oliveira',sala:'Curitiba',data:'07/09/2026'},
+        {prospect:'Lucas Barbosa',sala:'Floripa',data:'25/08/2026'},
+        {prospect:'Mariana Campos',sala:'BH',data:'14/09/2026'},
+        {prospect:'Nelson Rocha',sala:'Porto Alegre',data:'02/09/2026'},
+        {prospect:'Olívia Santos',sala:'Natal',data:'20/08/2026'},
+        {prospect:'Paulo Mendes',sala:'Salinas Maragogi',data:'09/09/2026'},
+        {prospect:'Quitéria Andrade',sala:'Hotel Lacqua',data:'26/07/2026'},
+        {prospect:'Rafael Costa',sala:'Campo Grande',data:'11/09/2026'},
+        {prospect:'Simone Gomes',sala:'Porto 2 Life Hotel',data:'04/08/2026'},
+        {prospect:'Thiago Monteiro',sala:'Gramado - Dia',data:'16/09/2026'},
+        {prospect:'Úrsula Dias',sala:'Recife',data:'08/09/2026'},
+        {prospect:'Victor Neves',sala:'Fortaleza',data:'13/09/2026'},
+        {prospect:'Wanda Correia',sala:'Maceió',data:'06/09/2026'}
+      ],
+      Backlog:[{prospect:'Antônio Pereira',sala:'Porto Alegre',data:'21/08/2026'}],
+      Assinatura:[{prospect:'Beatriz Lopes',sala:'BH',data:'17/09/2026'}]
+    }
+  },
+  backlog:{
+    total:943,
+    statusGeral:{'Concluído':858,'Em Andamento':45,'A Pagar':39,'A Designar':1},
+    porSala:{'Hotel Porto Alto 2':119,'Salinas':65,'Gramado':58,'Lacqua':52,'Campo Grande':48,'Recife':44,'Fortaleza':41,'Manaus':37,'Belém':34,'Curitiba':31},
+    valorRestituido:583902.83,vgv:14809040.88,
+    auditoria:{
+      total:439,
+      status:{'Concluído':390,'Em Andamento':35,'A Designar':14},
+      porSala:{'Hotel Porto Alto 2':55,'Salinas':32,'Gramado':28,'Lacqua':24,'Campo Grande':22}
+    },
+    posVendas:{
+      total:149,
+      status:{'Concluído':120,'Em Andamento':25,'A Designar':4},
+      inconsistencias:{
+        'Dados incorretos no contrato':42,
+        'Falta de assinatura':31,
+        'Documentação incompleta':24,
+        'Divergência de valores':18,
+        'Cláusula contestada':12,
+        'Outros':22
+      },
+      porSala:{'Hotel Porto Alto 2':38,'Salinas':18,'Gramado':16,'Lacqua':14}
+    },
+    reembolsoEstorno:{
+      total:354,
+      status:{'Concluído':348,'Em Andamento':4,'A Pagar':39,'A Designar':1},
+      porSala:{'Hotel Porto Alto 2':90,'Salinas':48,'Gramado':42,'Lacqua':38},
+      valorRestituido:583902.83,vgv:14809040.88
+    }
+  }
+};
+
+// ── Formatters ────────────────────────────────────────────────
+const N = n => Number(n||0).toLocaleString('pt-BR');
+const R = n => {
+  n = Number(n||0);
+  if(n>=1e6) return 'R$ '+(n/1e6).toFixed(2).replace('.',',')+' M';
+  if(n>=1e3) return 'R$ '+(n/1e3).toFixed(1).replace('.',',')+' K';
+  return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2});
+};
+const P=(a,b)=>b>0?((a/b)*100).toFixed(1)+'%':'–';
+
+// ── Charts ────────────────────────────────────────────────────
+const PAL=['#0B306B','#A57A4C','#1a5276','#c49660','#2e86c1','#d4ac0d','#1e8449','#e74c3c','#8e44ad','#16a085'];
+const DPAL=['#0B306B','#A57A4C','#2e86c1','#1e8449','#e74c3c','#8e44ad'];
+function kill(id){if(CH[id]){CH[id].destroy();delete CH[id]}}
+function bar(id,labels,vals){
+  kill(id);
+  CH[id]=new Chart(document.getElementById(id),{
+    type:'bar',
+    data:{labels,datasets:[{data:vals,backgroundColor:PAL,borderRadius:5,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+N(c.raw)}}},
+      scales:{x:{ticks:{font:{family:'Raleway',size:10},color:'#555',maxRotation:35}},
+              y:{ticks:{font:{family:'Raleway',size:10},color:'#555',callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v},grid:{color:'rgba(0,0,0,.05)'}}}
+    }
+  });
+}
+function donut(id,labels,vals){
+  kill(id);
+  CH[id]=new Chart(document.getElementById(id),{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:DPAL,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'bottom',labels:{font:{family:'Raleway',size:10},padding:8,boxWidth:12}},
+               tooltip:{callbacks:{label:c=>' '+c.label+': '+N(c.raw)}}}
+    }
+  });
+}
+
+// ── Prospect list builder ─────────────────────────────────────
+function buildProspectList(elId, lista) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!lista || lista.length === 0) {
+    el.innerHTML = '<div class="pi-empty">Nenhum prospect</div>';
+    return;
+  }
+  el.innerHTML = lista.map(c => `
+    <div class="pi">
+      <div class="pi-name">${c.prospect||'–'}</div>
+      <div class="pi-sala">${c.sala||''}</div>
+      ${c.data?`<div class="pi-data">${c.data}</div>`:''}
+    </div>`).join('');
+}
+
+// ── Render Central ────────────────────────────────────────────
+function renderCentral(c) {
+  document.getElementById('kv-tot').textContent = N(c.totalProspects);
+  document.getElementById('kv-vnd').textContent = N(c.vendidas);
+  document.getElementById('kv-con').textContent = N(c.confirmadas);
+  document.getElementById('kv-tx').textContent  = P(c.vendidas+c.confirmadas, c.totalProspects);
+
+  const p = c.pendencias||{};
+  document.getElementById('pv-ap0').textContent = N(p['Aprovado']||0);
+  document.getElementById('pv-ap1').textContent = N(p['Aprovar']||0);
+  document.getElementById('pv-ap2').textContent = N(p['Backlog']||0);
+  document.getElementById('pv-ap3').textContent = N(p['Assinatura']||0);
+
+  const dets = c.detalhes||{};
+  buildProspectList('pl-aprovar',   dets['Aprovar']);
+  buildProspectList('pl-backlog',   dets['Backlog']);
+  buildProspectList('pl-assinatura',dets['Assinatura']);
+
+  const sl = c.porSala||{}, top = Object.keys(sl).slice(0,10);
+  bar('ch-sala-c', top, top.map(k=>sl[k]));
+  const sp = c.statusProposta||{};
+  donut('ch-status', Object.keys(sp), Object.values(sp));
+  donut('ch-pend', Object.keys(p), Object.values(p));
+}
+
+// ── Render Backlog ────────────────────────────────────────────
+function renderBacklog(b) {
+  const st = b.statusGeral||{}, con = st['Concluído']||0;
+  document.getElementById('bk-tot').textContent = N(b.total);
+  document.getElementById('bk-rst').textContent = R(b.valorRestituido);
+  document.getElementById('bk-vgv').textContent = R(b.vgv);
+  document.getElementById('bk-tx').textContent  = P(con, b.total);
+
+  // Auditoria
+  const a = b.auditoria||{};
+  document.getElementById('aud-tot').textContent = N(a.total);
+  document.getElementById('aud-sub').textContent = N(a.total)+' solicitações';
+  const as = a.status||{};
+  document.getElementById('aud-con').textContent = N(as['Concluído']||0);
+  document.getElementById('aud-and').textContent = N(as['Em Andamento']||0);
+  document.getElementById('aud-des').textContent = N(as['A Designar']||0);
+
+  // Pós Vendas
+  const pv = b.posVendas||{};
+  document.getElementById('pv-tot').textContent = N(pv.total);
+  document.getElementById('pv-sub').textContent = N(pv.total)+' solicitações';
+  const pvs = pv.status||{};
+  document.getElementById('pv-con').textContent = N(pvs['Concluído']||0);
+  document.getElementById('pv-and').textContent = N(pvs['Em Andamento']||0);
+  document.getElementById('pv-des').textContent = N(pvs['A Designar']||0);
+
+  // Inconsistências
+  const inc = pv.inconsistencias||{};
+  const incEl = document.getElementById('pv-incons');
+  const incKeys = Object.keys(inc);
+  if (incKeys.length === 0) {
+    incEl.innerHTML = '<div class="pi-empty">Sem inconsistências registradas</div>';
+  } else {
+    incEl.innerHTML = incKeys.map(k =>
+      `<div class="incons-item"><span class="incons-key">${k}</span><span class="incons-cnt">${N(inc[k])}</span></div>`
+    ).join('');
+  }
+
+  // Reembolso / Estorno
+  const re = b.reembolsoEstorno||{};
+  document.getElementById('re-tot').textContent = N(re.total);
+  document.getElementById('re-sub').textContent = N(re.total)+' solicitações';
+  const res = re.status||{};
+  document.getElementById('re-con').textContent = N(res['Concluído']||0);
+  document.getElementById('re-and').textContent = N(res['Em Andamento']||0);
+  document.getElementById('re-pag').textContent = N(res['A Pagar']||0);
+  document.getElementById('re-rst').textContent = R(re.valorRestituido);
+  document.getElementById('re-vgv').textContent = R(re.vgv);
+
+  // Charts
+  const sl = b.porSala||{}, top = Object.keys(sl).slice(0,10);
+  bar('ch-sala-b', top, top.map(k=>sl[k]));
+  donut('ch-tipo',
+    ['Auditoria','Pós Vendas','Reembolso / Estorno'],
+    [(b.auditoria||{}).total||0, (b.posVendas||{}).total||0, (b.reembolsoEstorno||{}).total||0]
+  );
+}
+
+function renderAll(data) {
+  renderCentral(data.central || DEMO.central);
+  renderBacklog(data.backlog  || DEMO.backlog);
+}
+
+// ── Date filter ───────────────────────────────────────────────
+function applyFilter() {
+  const from = document.getElementById('dt-from').value;
+  const to   = document.getElementById('dt-to').value;
+  loadData(from||null, to||null);
+}
+
+function clearFilter() {
+  document.getElementById('dt-from').value = '';
+  document.getElementById('dt-to').value   = '';
+  loadData(null, null);
+}
+
+// ── Tab switch ────────────────────────────────────────────────
+function setTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Load data ─────────────────────────────────────────────────
+// JSONP — evita bloqueio de CORS do Apps Script redirect
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '_gav_' + Date.now();
+    const s  = document.createElement('script');
+    const sep = url.includes('?') ? '&' : '?';
+    s.src = url + sep + 'callback=' + cb;
+    window[cb] = data => { delete window[cb]; s.remove(); resolve(data); };
+    s.onerror  = ()   => { delete window[cb]; s.remove(); reject(new Error('JSONP falhou')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function loadData(from, to) {
+  const key = (from||'all')+'_'+(to||'all');
+
+  // Render demo imediatamente enquanto carrega
+  renderAll(DEMO);
+
+  // Cache de sessão
+  if (sessionCache.has(key)) {
+    renderAll(sessionCache.get(key));
+    setStatus('live', sessionCache.get(key).updatedAt);
+    return;
+  }
+
+  setLoading(true);
+  try {
+    let url = URL_GAS;
+    const params = [];
+    if (from) params.push('from='+from);
+    if (to)   params.push('to='+to);
+    if (params.length) url += '?' + params.join('&');
+
+    const data = await jsonp(url);
+    if (data.error) throw new Error(data.error);
+
+    sessionCache.set(key, data);
+    renderAll(data);
+    setStatus('live', data.updatedAt);
+  } catch(e) {
+    setStatus('demo');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  document.getElementById('loading-bar').style.display = on ? 'flex' : 'none';
+}
+
+function setStatus(mode, ts) {
+  const el = document.getElementById('last-update');
+  if (mode === 'live') {
+    const d = ts ? new Date(ts).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '—';
+    el.innerHTML = `<span class="blv">Ao vivo</span>&nbsp;${d}`;
+  } else {
+    el.innerHTML = '<span class="bdm">Demo</span>&nbsp;Apps Script indisponível';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadData(null, null);
+</script>
+</body>
+</html>
