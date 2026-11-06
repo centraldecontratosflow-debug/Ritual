@@ -163,6 +163,14 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
 @media(max-width:540px){
   .k4,.k3,.prow{grid-template-columns:1fr 1fr}
 }
+
+.tbar{overflow-x:auto;flex-shrink:0}.tbtn{white-space:nowrap}.cwrap.tall{height:330px}.cwrap.bar{height:330px}
+.scope-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;font-size:13px;color:var(--tl)}
+.source{background:white;border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:18px 0;font-size:13px;line-height:1.7}.source summary{cursor:pointer;font-weight:600;color:var(--navy)}.source p{margin-top:10px}
+.table-wrap{overflow:auto;max-height:440px;margin-top:12px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--border)}th:last-child,td:last-child{text-align:right}th{position:sticky;top:0;background:var(--cream)}
+.notice{background:var(--amber2);color:var(--amber);padding:10px;border-radius:8px;margin-bottom:12px}.notice:empty{display:none}.export{border:1px solid var(--bronze);border-radius:20px;padding:7px 14px;background:white;color:var(--navy);cursor:pointer;white-space:nowrap}
+.money{font-size:22px;overflow-wrap:anywhere}.kval{overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0)}button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #c49660;outline-offset:3px}
+@media(max-width:540px){.hdr{height:auto;min-height:76px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.hdr-right{margin-left:0}.hdr-title{font-size:16px}.scope-row{align-items:flex-start;flex-direction:column}.cg311,.cg21,.cg12{grid-template-columns:1fr}.kval{font-size:24px}.money{font-size:18px}.main{padding-top:16px}.tbtn{padding:12px}.cwrap.tall,.cwrap.bar{height:340px}}
 </style>
 </head>
 <body>
@@ -176,15 +184,15 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
   </div>
   <div class="hdr-right">
     <span id="last-update">Carregando…</span>
-    <button class="btn-ref" onclick="applyFilter()">↺ Atualizar</button>
+    <button class="btn-ref" id="refresh" onclick="loadData()">↺ Atualizar</button>
   </div>
 </header>
 
 <!-- Date filter bar -->
 <div class="dbar">
-  <span class="dlbl">De</span>
+  <label class="dlbl" for="dt-from">De</label>
   <input type="date" id="dt-from" class="dt-input">
-  <span class="dlbl">Até</span>
+  <label class="dlbl" for="dt-to">Até</label>
   <input type="date" id="dt-to" class="dt-input">
   <button class="btn-apply" onclick="applyFilter()">Aplicar</button>
   <button class="btn-clear" onclick="clearFilter()">Limpar</button>
@@ -194,25 +202,33 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
   </div>
 </div>
 
-<nav class="tbar">
+<nav class="tbar" aria-label="Áreas do dashboard">
   <button class="tbtn active" onclick="setTab('central',this)">Central de Contratos</button>
   <button class="tbtn" onclick="setTab('backlog',this)">Backlog</button>
+  <button class="tbtn" onclick="setTab('auditoria',this)">Auditoria TS</button>
+  <button class="tbtn" onclick="setTab('vendas',this)">Vendas</button>
+  <button class="tbtn" onclick="setTab('analitico',this)">Analítico de Vendas</button>
 </nav>
 
 <main class="main">
+<h1 class="sr-only">Dashboard Ritual · Central de Contratos</h1>
+<p id="load-error" class="notice" role="alert" hidden></p>
+<p id="filter-error" class="notice" role="alert"></p>
+<div class="scope-row"><p id="scope" aria-live="polite">Carregando dados da planilha…</p><button class="export" onclick="exportCsv()">Exportar seleção CSV</button></div>
+<p id="empty-state" class="notice" hidden>Sem registros no período selecionado.</p>
 
   <!-- ── CENTRAL DE CONTRATOS ── -->
   <div class="panel active" id="tab-central">
 
     <div class="stitle">Visão Geral</div>
     <div class="krow k4">
-      <div class="kcard"><div class="klbl">Total Prospects</div><div class="kval" id="kv-tot">–</div></div>
+      <div class="kcard"><div class="klbl">Total de propostas</div><div class="kval" id="kv-tot">–</div></div>
       <div class="kcard gr"><div class="klbl">Vendidas</div><div class="kval" id="kv-vnd">–</div></div>
       <div class="kcard br"><div class="klbl">Confirmadas</div><div class="kval" id="kv-con">–</div></div>
-      <div class="kcard am"><div class="klbl">Taxa Conversão</div><div class="kval" id="kv-tx">–</div></div>
+      <div class="kcard am"><div class="klbl">Propostas vendidas (%)</div><div class="kval" id="kv-tx">–</div></div>
     </div>
 
-    <div class="stitle">Pendências e Prospects</div>
+    <div class="stitle">Pendências por sala</div>
     <div class="prow">
       <div class="pcard ap0">
         <div class="pnum" id="pv-ap0">–</div>
@@ -235,10 +251,10 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
       </div>
     </div>
 
-    <div class="stitle">Análise por Sala e Status</div>
+    <div class="stitle">Análise por sala e status</div>
     <div class="cgrid cg311">
       <div class="ccard">
-        <div class="ctitle">Prospects por Sala de Vendas</div>
+        <div class="ctitle">Propostas por sala · Top 10</div>
         <div class="cwrap bar"><canvas id="ch-sala-c"></canvas></div>
       </div>
       <div class="ccard">
@@ -250,6 +266,7 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
         <div class="cwrap dnt"><canvas id="ch-pend"></canvas></div>
       </div>
     </div>
+    <details class="source"><summary>Ver todas as salas</summary><div id="central-detail" class="table-wrap"></div></details>
   </div>
 
   <!-- ── BACKLOG ── -->
@@ -270,7 +287,7 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
           <div class="tipo-badge aud" id="aud-tot">–</div>
         </div>
         <div>
-          <div class="tipo-htitle">Auditoria</div>
+          <div class="tipo-htitle">Erros</div>
           <div class="tipo-htotal" id="aud-sub">solicitações</div>
         </div>
       </div>
@@ -337,7 +354,7 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
     <div class="stitle">Solicitações por Sala</div>
     <div class="cgrid cg21">
       <div class="ccard">
-        <div class="ctitle">Por Sala de Vendas</div>
+        <div class="ctitle">Solicitações por sala · Top 10</div>
         <div class="cwrap bar"><canvas id="ch-sala-b"></canvas></div>
       </div>
       <div class="ccard">
@@ -345,316 +362,52 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
         <div class="cwrap dnt"><canvas id="ch-tipo"></canvas></div>
       </div>
     </div>
+    <details class="source"><summary>Ver todas as salas</summary><div id="backlog-detail" class="table-wrap"></div></details>
   </div>
 
+    <div class="panel" id="tab-auditoria">
+      <div class="stitle">Auditoria TS</div>
+      <div class="krow k4">
+        <div class="kcard"><div class="klbl">Registros de auditoria</div><div class="kval" id="ts-total">—</div></div>
+        <div class="kcard gr"><div class="klbl">Auditados</div><div class="kval" id="ts-done">—</div></div>
+        <div class="kcard am"><div class="klbl">Pendentes</div><div class="kval" id="ts-open">—</div></div>
+        <div class="kcard br"><div class="klbl">Taxa de auditoria</div><div class="kval" id="ts-rate">—</div></div>
+      </div>
+      <div class="cgrid cg21"><div class="ccard"><div class="ctitle">Registros por sala · Top 10</div><div class="cwrap tall"><canvas id="ts-room"></canvas></div></div><div class="ccard"><div class="ctitle">Status de auditoria</div><div class="cwrap dnt"><canvas id="ts-status"></canvas></div></div></div>
+      <div class="ccard"><div class="ctitle">Registros por mês de referência</div><div class="cwrap bar"><canvas id="ts-month"></canvas></div></div>
+      <details class="source"><summary>Registros por responsável</summary><div class="table-wrap" id="auditoria-detail"></div></details>
+    </div>
+
+    <div class="panel" id="tab-vendas">
+      <div class="stitle">Vendas</div>
+      <div class="krow k4">
+        <div class="kcard"><div class="klbl">Registros de propostas</div><div class="kval" id="vendas-total">—</div></div>
+        <div class="kcard gr"><div class="klbl">Vendidas</div><div class="kval" id="vendas-sold">—</div></div>
+        <div class="kcard br"><div class="klbl">VGV vendido</div><div class="kval money" id="vendas-vgv">—</div></div>
+        <div class="kcard am"><div class="klbl">Ticket por proposta vendida</div><div class="kval money" id="vendas-ticket">—</div></div>
+      </div>
+      <div class="cgrid cg21"><div class="ccard"><div class="ctitle">VGV vendido por sala · Top 10</div><div class="cwrap tall"><canvas id="vendas-room"></canvas></div></div><div class="ccard"><div class="ctitle">Status das propostas</div><div class="cwrap dnt"><canvas id="vendas-status"></canvas></div></div></div>
+      <div class="cgrid cg21"><div class="ccard"><div class="ctitle">VGV vendido por mês da proposta</div><div class="cwrap tall"><canvas id="vendas-month"></canvas></div></div><div class="ccard"><div class="ctitle">VGV vendido por empreendimento · Top 10</div><div class="cwrap tall"><canvas id="vendas-project"></canvas></div></div></div>
+      <details class="source"><summary>VGV vendido · todas as salas</summary><div class="table-wrap" id="vendas-detail"></div></details>
+    </div>
+
+    <div class="panel" id="tab-analitico">
+      <div class="stitle">Analítico de Vendas</div>
+      <div class="krow k4">
+        <div class="kcard"><div class="klbl">Registros de propostas</div><div class="kval" id="analitico-total">—</div></div>
+        <div class="kcard gr"><div class="klbl">Vendidas</div><div class="kval" id="analitico-sold">—</div></div>
+        <div class="kcard br"><div class="klbl">VGV vendido</div><div class="kval money" id="analitico-vgv">—</div></div>
+        <div class="kcard am"><div class="klbl">Ticket por proposta vendida</div><div class="kval money" id="analitico-ticket">—</div></div>
+      </div>
+      <div class="cgrid cg21"><div class="ccard"><div class="ctitle">VGV vendido por sala · Top 10</div><div class="cwrap tall"><canvas id="analitico-room"></canvas></div></div><div class="ccard"><div class="ctitle">Status das propostas</div><div class="cwrap dnt"><canvas id="analitico-status"></canvas></div></div></div>
+      <div class="cgrid cg21"><div class="ccard"><div class="ctitle">VGV vendido por mês da proposta</div><div class="cwrap tall"><canvas id="analitico-month"></canvas></div></div><div class="ccard"><div class="ctitle">VGV vendido por empreendimento · Top 10</div><div class="cwrap tall"><canvas id="analitico-project"></canvas></div></div></div>
+      <details class="source"><summary>VGV vendido · todas as salas</summary><div class="table-wrap" id="analitico-detail"></div></details>
+    </div>
+
+<details class="source"><summary>Fonte e critérios dos indicadores</summary><p id="source-info"></p><p id="source-notes"></p></details>
 </main>
 </div>
 
-<script>
-// ── Config ────────────────────────────────────────────────────
-const URL_GAS = 'https://script.google.com/macros/s/AKfycbxnXvwk5ECjPuCltSOatfOPv6-8vsWchcHYTat5nqk3_Oa80cXiGWec-Dhk2oQx1eNP/exec';
-
-// ── State ─────────────────────────────────────────────────────
-let currentData = null;
-let CH = {};
-const sessionCache = new Map(); // cache por range dentro da sessão
-
-// ── Demo data ─────────────────────────────────────────────────
-const DEMO = {
-  central:{
-    totalProspects:39251,vendidas:39194,confirmadas:57,
-    pendencias:{Aprovado:39104,Aprovar:23,Backlog:1,Assinatura:1},
-    statusProposta:{Vendida:39194,Confirmada:57},
-    porSala:{'Porto 2 Life Hotel':6425,'Gramado - Dia':2903,'Salinas Maragogi':2744,'Hotel Lacqua':2439,'Campo Grande':2102,'Recife':1987,'Fortaleza':1823,'Manaus':1654,'Belém':1543,'Curitiba':1432},
-    detalhes:{
-      Aprovar:[
-        {prospect:'Ana Clara Melo',sala:'Porto 2 Life Hotel',data:'12/08/2026'},
-        {prospect:'Bruno Farias',sala:'Gramado - Dia',data:'03/09/2026'},
-        {prospect:'Carla Nascimento',sala:'Salinas Maragogi',data:'28/07/2026'},
-        {prospect:'Daniel Souza',sala:'Hotel Lacqua',data:'15/08/2026'},
-        {prospect:'Elisa Tavares',sala:'Campo Grande',data:'01/09/2026'},
-        {prospect:'Felipe Alves',sala:'Recife',data:'22/08/2026'},
-        {prospect:'Gabriela Torres',sala:'Fortaleza',data:'10/09/2026'},
-        {prospect:'Henrique Lima',sala:'Porto 2 Life Hotel',data:'05/09/2026'},
-        {prospect:'Isabela Ferreira',sala:'Manaus',data:'30/08/2026'},
-        {prospect:'Jonas Pires',sala:'Belém',data:'18/08/2026'},
-        {prospect:'Karen Oliveira',sala:'Curitiba',data:'07/09/2026'},
-        {prospect:'Lucas Barbosa',sala:'Floripa',data:'25/08/2026'},
-        {prospect:'Mariana Campos',sala:'BH',data:'14/09/2026'},
-        {prospect:'Nelson Rocha',sala:'Porto Alegre',data:'02/09/2026'},
-        {prospect:'Olívia Santos',sala:'Natal',data:'20/08/2026'},
-        {prospect:'Paulo Mendes',sala:'Salinas Maragogi',data:'09/09/2026'},
-        {prospect:'Quitéria Andrade',sala:'Hotel Lacqua',data:'26/07/2026'},
-        {prospect:'Rafael Costa',sala:'Campo Grande',data:'11/09/2026'},
-        {prospect:'Simone Gomes',sala:'Porto 2 Life Hotel',data:'04/08/2026'},
-        {prospect:'Thiago Monteiro',sala:'Gramado - Dia',data:'16/09/2026'},
-        {prospect:'Úrsula Dias',sala:'Recife',data:'08/09/2026'},
-        {prospect:'Victor Neves',sala:'Fortaleza',data:'13/09/2026'},
-        {prospect:'Wanda Correia',sala:'Maceió',data:'06/09/2026'}
-      ],
-      Backlog:[{prospect:'Antônio Pereira',sala:'Porto Alegre',data:'21/08/2026'}],
-      Assinatura:[{prospect:'Beatriz Lopes',sala:'BH',data:'17/09/2026'}]
-    }
-  },
-  backlog:{
-    total:943,
-    statusGeral:{'Concluído':858,'Em Andamento':45,'A Pagar':39,'A Designar':1},
-    porSala:{'Hotel Porto Alto 2':119,'Salinas':65,'Gramado':58,'Lacqua':52,'Campo Grande':48,'Recife':44,'Fortaleza':41,'Manaus':37,'Belém':34,'Curitiba':31},
-    valorRestituido:583902.83,vgv:14809040.88,
-    auditoria:{
-      total:439,
-      status:{'Concluído':390,'Em Andamento':35,'A Designar':14},
-      porSala:{'Hotel Porto Alto 2':55,'Salinas':32,'Gramado':28,'Lacqua':24,'Campo Grande':22}
-    },
-    posVendas:{
-      total:149,
-      status:{'Concluído':120,'Em Andamento':25,'A Designar':4},
-      inconsistencias:{
-        'Dados incorretos no contrato':42,
-        'Falta de assinatura':31,
-        'Documentação incompleta':24,
-        'Divergência de valores':18,
-        'Cláusula contestada':12,
-        'Outros':22
-      },
-      porSala:{'Hotel Porto Alto 2':38,'Salinas':18,'Gramado':16,'Lacqua':14}
-    },
-    reembolsoEstorno:{
-      total:354,
-      status:{'Concluído':348,'Em Andamento':4,'A Pagar':39,'A Designar':1},
-      porSala:{'Hotel Porto Alto 2':90,'Salinas':48,'Gramado':42,'Lacqua':38},
-      valorRestituido:583902.83,vgv:14809040.88
-    }
-  }
-};
-
-// ── Formatters ────────────────────────────────────────────────
-const N = n => Number(n||0).toLocaleString('pt-BR');
-const R = n => {
-  n = Number(n||0);
-  if(n>=1e6) return 'R$ '+(n/1e6).toFixed(2).replace('.',',')+' M';
-  if(n>=1e3) return 'R$ '+(n/1e3).toFixed(1).replace('.',',')+' K';
-  return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2});
-};
-const P=(a,b)=>b>0?((a/b)*100).toFixed(1)+'%':'–';
-
-// ── Charts ────────────────────────────────────────────────────
-const PAL=['#0B306B','#A57A4C','#1a5276','#c49660','#2e86c1','#d4ac0d','#1e8449','#e74c3c','#8e44ad','#16a085'];
-const DPAL=['#0B306B','#A57A4C','#2e86c1','#1e8449','#e74c3c','#8e44ad'];
-function kill(id){if(CH[id]){CH[id].destroy();delete CH[id]}}
-function bar(id,labels,vals){
-  kill(id);
-  CH[id]=new Chart(document.getElementById(id),{
-    type:'bar',
-    data:{labels,datasets:[{data:vals,backgroundColor:PAL,borderRadius:5,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+N(c.raw)}}},
-      scales:{x:{ticks:{font:{family:'Raleway',size:10},color:'#555',maxRotation:35}},
-              y:{ticks:{font:{family:'Raleway',size:10},color:'#555',callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v},grid:{color:'rgba(0,0,0,.05)'}}}
-    }
-  });
-}
-function donut(id,labels,vals){
-  kill(id);
-  CH[id]=new Chart(document.getElementById(id),{
-    type:'doughnut',
-    data:{labels,datasets:[{data:vals,backgroundColor:DPAL,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
-      plugins:{legend:{position:'bottom',labels:{font:{family:'Raleway',size:10},padding:8,boxWidth:12}},
-               tooltip:{callbacks:{label:c=>' '+c.label+': '+N(c.raw)}}}
-    }
-  });
-}
-
-// ── Prospect list builder ─────────────────────────────────────
-function buildProspectList(elId, lista) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  if (!lista || lista.length === 0) {
-    el.innerHTML = '<div class="pi-empty">Nenhum prospect</div>';
-    return;
-  }
-  el.innerHTML = lista.map(c => `
-    <div class="pi">
-      <div class="pi-name">${c.prospect||'–'}</div>
-      <div class="pi-sala">${c.sala||''}</div>
-      ${c.data?`<div class="pi-data">${c.data}</div>`:''}
-    </div>`).join('');
-}
-
-// ── Render Central ────────────────────────────────────────────
-function renderCentral(c) {
-  document.getElementById('kv-tot').textContent = N(c.totalProspects);
-  document.getElementById('kv-vnd').textContent = N(c.vendidas);
-  document.getElementById('kv-con').textContent = N(c.confirmadas);
-  document.getElementById('kv-tx').textContent  = P(c.vendidas+c.confirmadas, c.totalProspects);
-
-  const p = c.pendencias||{};
-  document.getElementById('pv-ap0').textContent = N(p['Aprovado']||0);
-  document.getElementById('pv-ap1').textContent = N(p['Aprovar']||0);
-  document.getElementById('pv-ap2').textContent = N(p['Backlog']||0);
-  document.getElementById('pv-ap3').textContent = N(p['Assinatura']||0);
-
-  const dets = c.detalhes||{};
-  buildProspectList('pl-aprovar',   dets['Aprovar']);
-  buildProspectList('pl-backlog',   dets['Backlog']);
-  buildProspectList('pl-assinatura',dets['Assinatura']);
-
-  const sl = c.porSala||{}, top = Object.keys(sl).slice(0,10);
-  bar('ch-sala-c', top, top.map(k=>sl[k]));
-  const sp = c.statusProposta||{};
-  donut('ch-status', Object.keys(sp), Object.values(sp));
-  donut('ch-pend', Object.keys(p), Object.values(p));
-}
-
-// ── Render Backlog ────────────────────────────────────────────
-function renderBacklog(b) {
-  const st = b.statusGeral||{}, con = st['Concluído']||0;
-  document.getElementById('bk-tot').textContent = N(b.total);
-  document.getElementById('bk-rst').textContent = R(b.valorRestituido);
-  document.getElementById('bk-vgv').textContent = R(b.vgv);
-  document.getElementById('bk-tx').textContent  = P(con, b.total);
-
-  // Auditoria
-  const a = b.auditoria||{};
-  document.getElementById('aud-tot').textContent = N(a.total);
-  document.getElementById('aud-sub').textContent = N(a.total)+' solicitações';
-  const as = a.status||{};
-  document.getElementById('aud-con').textContent = N(as['Concluído']||0);
-  document.getElementById('aud-and').textContent = N(as['Em Andamento']||0);
-  document.getElementById('aud-des').textContent = N(as['A Designar']||0);
-
-  // Pós Vendas
-  const pv = b.posVendas||{};
-  document.getElementById('pv-tot').textContent = N(pv.total);
-  document.getElementById('pv-sub').textContent = N(pv.total)+' solicitações';
-  const pvs = pv.status||{};
-  document.getElementById('pv-con').textContent = N(pvs['Concluído']||0);
-  document.getElementById('pv-and').textContent = N(pvs['Em Andamento']||0);
-  document.getElementById('pv-des').textContent = N(pvs['A Designar']||0);
-
-  // Inconsistências
-  const inc = pv.inconsistencias||{};
-  const incEl = document.getElementById('pv-incons');
-  const incKeys = Object.keys(inc);
-  if (incKeys.length === 0) {
-    incEl.innerHTML = '<div class="pi-empty">Sem inconsistências registradas</div>';
-  } else {
-    incEl.innerHTML = incKeys.map(k =>
-      `<div class="incons-item"><span class="incons-key">${k}</span><span class="incons-cnt">${N(inc[k])}</span></div>`
-    ).join('');
-  }
-
-  // Reembolso / Estorno
-  const re = b.reembolsoEstorno||{};
-  document.getElementById('re-tot').textContent = N(re.total);
-  document.getElementById('re-sub').textContent = N(re.total)+' solicitações';
-  const res = re.status||{};
-  document.getElementById('re-con').textContent = N(res['Concluído']||0);
-  document.getElementById('re-and').textContent = N(res['Em Andamento']||0);
-  document.getElementById('re-pag').textContent = N(res['A Pagar']||0);
-  document.getElementById('re-rst').textContent = R(re.valorRestituido);
-  document.getElementById('re-vgv').textContent = R(re.vgv);
-
-  // Charts
-  const sl = b.porSala||{}, top = Object.keys(sl).slice(0,10);
-  bar('ch-sala-b', top, top.map(k=>sl[k]));
-  donut('ch-tipo',
-    ['Auditoria','Pós Vendas','Reembolso / Estorno'],
-    [(b.auditoria||{}).total||0, (b.posVendas||{}).total||0, (b.reembolsoEstorno||{}).total||0]
-  );
-}
-
-function renderAll(data) {
-  renderCentral(data.central || DEMO.central);
-  renderBacklog(data.backlog  || DEMO.backlog);
-}
-
-// ── Date filter ───────────────────────────────────────────────
-function applyFilter() {
-  const from = document.getElementById('dt-from').value;
-  const to   = document.getElementById('dt-to').value;
-  loadData(from||null, to||null);
-}
-
-function clearFilter() {
-  document.getElementById('dt-from').value = '';
-  document.getElementById('dt-to').value   = '';
-  loadData(null, null);
-}
-
-// ── Tab switch ────────────────────────────────────────────────
-function setTab(name, btn) {
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-  btn.classList.add('active');
-}
-
-// ── Load data ─────────────────────────────────────────────────
-// JSONP — evita bloqueio de CORS do Apps Script redirect
-function jsonp(url) {
-  return new Promise((resolve, reject) => {
-    const cb = '_gav_' + Date.now();
-    const s  = document.createElement('script');
-    const sep = url.includes('?') ? '&' : '?';
-    s.src = url + sep + 'callback=' + cb;
-    window[cb] = data => { delete window[cb]; s.remove(); resolve(data); };
-    s.onerror  = ()   => { delete window[cb]; s.remove(); reject(new Error('JSONP falhou')); };
-    document.head.appendChild(s);
-  });
-}
-
-async function loadData(from, to) {
-  const key = (from||'all')+'_'+(to||'all');
-
-  // Render demo imediatamente enquanto carrega
-  renderAll(DEMO);
-
-  // Cache de sessão
-  if (sessionCache.has(key)) {
-    renderAll(sessionCache.get(key));
-    setStatus('live', sessionCache.get(key).updatedAt);
-    return;
-  }
-
-  setLoading(true);
-  try {
-    let url = URL_GAS;
-    const params = [];
-    if (from) params.push('from='+from);
-    if (to)   params.push('to='+to);
-    if (params.length) url += '?' + params.join('&');
-
-    const data = await jsonp(url);
-    if (data.error) throw new Error(data.error);
-
-    sessionCache.set(key, data);
-    renderAll(data);
-    setStatus('live', data.updatedAt);
-  } catch(e) {
-    setStatus('demo');
-  } finally {
-    setLoading(false);
-  }
-}
-
-function setLoading(on) {
-  document.getElementById('loading-bar').style.display = on ? 'flex' : 'none';
-}
-
-function setStatus(mode, ts) {
-  const el = document.getElementById('last-update');
-  if (mode === 'live') {
-    const d = ts ? new Date(ts).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '—';
-    el.innerHTML = `<span class="blv">Ao vivo</span>&nbsp;${d}`;
-  } else {
-    el.innerHTML = '<span class="bdm">Demo</span>&nbsp;Apps Script indisponível';
-  }
-}
-
-// ── Init ──────────────────────────────────────────────────────
-loadData(null, null);
-</script>
+<script src="app.js"></script>
 </body>
 </html>
