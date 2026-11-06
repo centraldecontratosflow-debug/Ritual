@@ -26,7 +26,7 @@ function chart(id,obj,type='bar',currency=false){
   if(typeof Chart==='undefined'){el.parentElement.textContent='Gráfico indisponível. Consulte os totais na tabela.';return;}
   CH[id]=new Chart(el,{type:type==='donut'?'doughnut':type,data:{labels:entries.map(e=>e[0]),datasets:[{label:currency?'VGV vendido':'Registros',data:entries.map(e=>e[1]),backgroundColor:type==='donut'?['#0B306B','#A57A4C','#2e7d32','#e65100','#1565c0','#6a1b9a','#667085']:'#0B306B',borderColor:'#A57A4C',borderWidth:type==='line'?2:0,borderRadius:type==='bar'?4:0,tension:0,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,animation:false,...(type==='bar'?{indexAxis:'y'}:{}),...(type==='donut'?{cutout:'60%'}:{}),plugins:{legend:{display:type==='donut',position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${currency?R(c.raw):N(c.raw)}`}}},...(type==='donut'?{}:{scales:{x:{beginAtZero:true,ticks:{maxRotation:0,...(type==='bar'&&currency?{callback:axisMoney}:{})}},y:{beginAtZero:true,ticks:{callback:type==='bar'?undefined:v=>currency?axisMoney(v):N(v)}}}})}});
 }
-function top(obj){return Object.fromEntries(sorted(obj).slice(0,10));}
+function topEntries(obj){return Object.fromEntries(sorted(obj).slice(0,10));}
 function summaryTable(id,obj,heading='Sala de vendas',currency=false){
   const pairs=sorted(obj);
   document.getElementById(id).innerHTML=pairs.length?`<table><thead><tr><th>${esc(heading)}</th><th>${currency?'VGV vendido':'Registros'}</th></tr></thead><tbody>${pairs.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${currency?R(v):N(v)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">Sem registros no período selecionado.</p>';
@@ -40,7 +40,7 @@ function renderCentral(rs){
   val('kv-tot',N(total));val('kv-vnd',N(statuses.Vendida));val('kv-con',N(statuses.Confirmada));val('kv-tx',P(statuses.Vendida||0,total));
   ['Aprovado','Aprovar','Backlog','Assinatura'].forEach((p,i)=>val('pv-ap'+i,N(pending[p])));
   pendingList('pl-aprovar',rs,'Aprovar');pendingList('pl-backlog',rs,'Backlog');pendingList('pl-assinatura',rs,'Assinatura');
-  chart('ch-sala-c',top(group(rs,1)));chart('ch-status',statuses,'donut');chart('ch-pend',pending,'donut');
+  chart('ch-sala-c',topEntries(group(rs,1)));chart('ch-status',statuses,'donut');chart('ch-pend',pending,'donut');
   summaryTable('central-detail',group(rs,1));
 }
 function renderBacklog(rs){
@@ -57,21 +57,21 @@ function renderBacklog(rs){
       document.getElementById('pv-incons').innerHTML=entries.length?entries.map(([k,v])=>`<div class="incons-item"><span class="incons-key">${esc(k)}</span><span class="incons-cnt">${N(v)}</span></div>`).join(''):'<div class="pi-empty">Sem inconsistências no período</div>';
     }
   }
-  chart('ch-sala-b',top(group(rs,1)));chart('ch-tipo',group(rs,3),'donut');summaryTable('backlog-detail',group(rs,1));
+  chart('ch-sala-b',topEntries(group(rs,1)));chart('ch-tipo',group(rs,3),'donut');summaryTable('backlog-detail',group(rs,1));
 }
 function renderAudit(rs){
   const st=group(rs,2),total=count(rs);
   val('ts-total',N(total));val('ts-done',N(st.Auditado));val('ts-open',N(st.Pendente));val('ts-rate',P(st.Auditado||0,total));
-  chart('ts-room',top(group(rs,1)));chart('ts-status',st,'donut');
+  chart('ts-room',topEntries(group(rs,1)));chart('ts-status',st,'donut');
   chart('ts-month',group(rs,r=>r[0].slice(0,7)||'Sem data'),'line');
   summaryTable('auditoria-detail',group(rs,3),'Responsável');
 }
 function renderSales(rs,key){
   const sold=rs.filter(r=>r[2]==='Vendida'),st=group(rs,2);
   val(key+'-total',N(count(rs)));val(key+'-sold',N(count(sold)));val(key+'-vgv',R(amount(sold)));val(key+'-ticket',count(sold)?R(amount(sold)/count(sold)):'—');
-  chart(key+'-room',top(group(sold,1,5)),'bar',true);chart(key+'-status',st,'donut');
+  chart(key+'-room',topEntries(group(sold,1,5)),'bar',true);chart(key+'-status',st,'donut');
   chart(key+'-month',group(sold,r=>r[0].slice(0,7)||'Sem data',5),'line',true);
-  chart(key+'-project',top(group(sold,3,5)),'bar',true);
+  chart(key+'-project',topEntries(group(sold,3,5)),'bar',true);
   summaryTable(key+'-detail',group(sold,1,5),'Sala de vendas',true);
 }
 function renderSource(rs){
