@@ -3,6 +3,7 @@ let snapshot=null;
 let activeTab='central';
 let filtered=[];
 const CH={};
+let importTask=null;
 const labels={central:'Central de Contratos',backlog:'Backlog',auditoria:'Auditoria TS',vendas:'Vendas',analitico:'Analítico de Vendas'};
 const N=n=>Number(n||0).toLocaleString('pt-BR');
 const R=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:2});
@@ -13,7 +14,7 @@ const sum=(rs,col)=>rs.reduce((n,r)=>n+r[col],0);
 const count=rs=>sum(rs,rs.length?rs[0].length-3:4);
 const amount=rs=>sum(rs,rs.length?rs[0].length-2:5);
 function group(rs,col,valueCol=null){
-  const out={};
+  const out=Object.create(null);
   for(const r of rs){const key=typeof col==='function'?col(r):r[col];out[key]=(out[key]||0)+(valueCol===null?r[r.length-3]:r[valueCol]);}
   return out;
 }
@@ -79,7 +80,8 @@ function renderSource(rs){
   const fmt=d=>d?d.split('-').reverse().join('/'):'—';
   val('scope',`${labels[activeTab]} · ${N(count(rs))} registros · ${from||to?`${fmt(from||ds.start)} a ${fmt(to||ds.end)}`:'Todo o período: '+fmt(ds.start)+' a '+fmt(ds.end)}`);
   val('source-info',`Fonte: ${snapshot.source} → ${ds.sheet}. Data do filtro: ${ds.dateColumn}. Importação: ${new Date(snapshot.importedAt).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}.`);
-  let notes='Contagens por linha preenchida da aba, sem somar bases distintas. Valores em reais. O botão Atualizar recarrega a versão publicada da planilha.';
+  let notes='Contagens por linha preenchida da aba, sem somar bases distintas. Valores em reais. ';
+  notes+=snapshot.origin==='local'?'Arquivo importado neste navegador. Esta atualização fica salva apenas neste navegador; a versão publicada para a equipe continua disponível em “Versão publicada”. Fórmulas usam os valores salvos no Excel.':'“Atualizar da planilha” lê um arquivo Excel do computador e recalcula as cinco abas neste navegador.';
   if(activeTab==='central')notes+=' Total de propostas, sem deduplicação de clientes. Percentual vendido = Vendidas ÷ Total de propostas; a base contém apenas Vendida e Confirmada.';
   if(activeTab==='backlog')notes+=' Tipos e status normalizados apenas por grafia. Restituído e VGV são somas das respectivas colunas; A pagar é um status de tratativa.';
   if(activeTab==='auditoria')notes+=` Há ${N(ds.duplicateIds)} ocorrências adicionais de números de proposta repetidos na aba; os indicadores representam registros de auditoria, sem inferir clientes únicos. Campo AUDITORIA vazio = Pendente.`;
@@ -105,15 +107,75 @@ function setTab(name,btn){
   activeTab=name;document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
   document.querySelectorAll('.tbtn').forEach(b=>{b.classList.toggle('active',b===btn);b.setAttribute('aria-selected',b===btn?'true':'false');});render();
 }
-async function loadData(){
-  const button=document.getElementById('refresh');button.disabled=true;document.getElementById('loading-bar').style.display='flex';
+function savedSnapshot(action,value){
+  return new Promise((resolve,reject)=>{
+    if(typeof indexedDB==='undefined'){resolve(null);return;}
+    const open=indexedDB.open('ritual-dashboard',1);
+    open.onupgradeneeded=()=>{if(!open.result.objectStoreNames.contains('snapshots'))open.result.createObjectStore('snapshots');};
+    open.onerror=()=>reject(open.error);open.onblocked=()=>reject(Error('Armazenamento ocupado'));
+    open.onsuccess=()=>{
+      const db=open.result,tx=db.transaction('snapshots',action==='read'?'readonly':'readwrite'),store=tx.objectStore('snapshots');
+      const request=action==='read'?store.get('local'):action==='delete'?store.delete('local'):store.put(value,'local');
+      tx.oncomplete=()=>{db.close();resolve(action==='read'?request.result:true);};
+      tx.onerror=()=>{db.close();reject(tx.error);};tx.onabort=()=>{db.close();reject(tx.error||Error('Armazenamento indisponível'));};
+    };
+  });
+}
+function validSnapshot(data){return data&&Object.keys(labels).every(key=>data.datasets?.[key]&&Array.isArray(data.datasets[key].rows));}
+function setSnapshot(data){
+  if(!validSnapshot(data))throw Error('Base incompleta');
+  snapshot=data;
+  val('last-update',(data.origin==='local'?'Arquivo local · ':'Planilha · ')+new Date(data.importedAt).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}));
+  document.getElementById('load-error').hidden=true;render();
+}
+function importMessage(message,isError=false){
+  const el=document.getElementById('import-status');el.hidden=!message;el.textContent=message;el.classList.toggle('import-error',isError);
+}
+function busyImport(on){
+  document.getElementById('import-workbook').disabled=on;document.getElementById('refresh').disabled=on;
+  document.getElementById('cancel-import').hidden=!on;
+}
+function chooseWorkbook(){document.getElementById('workbook-file').click();}
+function cancelWorkbookImport(){
+  if(!importTask)return;
+  const task=importTask;task.worker.terminate();task.reject(Object.assign(Error('Leitura cancelada.'),{name:'AbortError'}));
+}
+async function importWorkbook(file){
+  if(!file||importTask)return;
+  if(!/\.xlsx$/i.test(file.name)){importMessage('Selecione uma planilha no formato .xlsx.',true);return;}
+  busyImport(true);importMessage('Preparando a leitura de '+file.name+'…');
   try{
+    const data=await new Promise((resolve,reject)=>{
+      const worker=new Worker('./workbook-worker.js?v=20261106-1');importTask={worker,reject};
+      worker.onmessage=({data})=>{
+        if(data.type==='progress')importMessage(data.message);
+        else if(data.type==='complete')resolve(data.snapshot);
+        else if(data.type==='error')reject(Error(data.message));
+      };
+      worker.onerror=()=>reject(Error('Não foi possível iniciar a leitura do Excel. Recarregue a página e tente novamente.'));
+      worker.postMessage({file});
+    });
+    if(!validSnapshot(data))throw Error('O arquivo não contém as cinco bases completas.');
+    let stored=false;try{stored=await savedSnapshot('write',data);}catch{}
+    setSnapshot(data);
+    importMessage(`${file.name}: cinco abas atualizadas. ${stored?'Os dados ficam salvos neste navegador.':'A atualização vale enquanto esta página estiver aberta.'} Para usar uma nova versão do Excel, selecione o arquivo novamente. A versão pública da equipe não é alterada.`);
+  }catch(e){
+    importMessage(e.name==='AbortError'?'Leitura cancelada. Os dados anteriores foram mantidos.':e.message+' Os dados anteriores foram mantidos.',e.name!=='AbortError');
+  }finally{importTask?.worker.terminate();importTask=null;busyImport(false);}
+}
+async function loadData(forcePublished=false){
+  const button=document.getElementById('refresh');button.disabled=true;document.getElementById('import-workbook').disabled=true;document.getElementById('loading-bar').style.display='flex';
+  try{
+    if(!forcePublished){
+      let saved=null;try{saved=await savedSnapshot('read');}catch{}
+      if(validSnapshot(saved)){setSnapshot(saved);importMessage('Exibindo '+saved.source+', importada e salva neste navegador. Selecione o Excel novamente para ler alterações recentes.');return;}
+    }
     const res=await fetch('./data.json',{cache:'no-store'});if(!res.ok)throw Error('Falha ao carregar a planilha publicada');
-    const data=await res.json();for(const key of Object.keys(labels))if(!data.datasets[key])throw Error('Base incompleta');
-    snapshot=data;val('last-update','Planilha · '+new Date(data.importedAt).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}));
-    document.getElementById('load-error').hidden=true;render();
+    const data=await res.json();if(!validSnapshot(data))throw Error('Base incompleta');
+    if(forcePublished){try{await savedSnapshot('delete');importMessage('Exibindo a versão publicada para a equipe.');}catch{importMessage('Versão publicada carregada. Não foi possível remover a cópia salva neste navegador.',true);}}
+    setSnapshot(data);
   }catch(e){const el=document.getElementById('load-error');el.hidden=false;el.textContent='Não foi possível carregar os dados. Tente Atualizar novamente.';if(!snapshot)val('last-update','Dados indisponíveis');}
-  finally{button.disabled=false;document.getElementById('loading-bar').style.display='none';}
+  finally{button.disabled=false;document.getElementById('import-workbook').disabled=false;document.getElementById('loading-bar').style.display='none';}
 }
 function exportCsv(){
   if(!snapshot)return;

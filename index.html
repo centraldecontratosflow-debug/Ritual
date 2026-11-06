@@ -171,6 +171,7 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
 .notice{background:var(--amber2);color:var(--amber);padding:10px;border-radius:8px;margin-bottom:12px}.notice:empty{display:none}.export{border:1px solid var(--bronze);border-radius:20px;padding:7px 14px;background:white;color:var(--navy);cursor:pointer;white-space:nowrap}
 .money{font-size:22px;overflow-wrap:anywhere}.kval{overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0)}button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #c49660;outline-offset:3px}
 @media(max-width:540px){.hdr{height:auto;min-height:76px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.hdr-right{margin-left:0}.hdr-title{font-size:16px}.scope-row{align-items:flex-start;flex-direction:column}.cg311,.cg21,.cg12{grid-template-columns:1fr}.kval{font-size:24px}.money{font-size:18px}.main{padding-top:16px}.tbtn{padding:12px}.cwrap.tall,.cwrap.bar{height:340px}}
+.import-button{background:var(--bronze);color:var(--cream)}.import-feedback{display:flex;align-items:center;gap:12px;margin-bottom:12px;font-size:12px;line-height:1.6}.import-feedback:has(p[hidden]){display:none}#import-status{padding:10px 14px;background:#e3f2fd;color:#0b306b;border-radius:8px;flex:1}#import-status.import-error{background:var(--red2);color:var(--red)}button:disabled{opacity:.55;cursor:wait}.hdr{height:auto;min-height:60px;padding-top:8px;padding-bottom:8px}.hdr-right{flex-wrap:wrap;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -184,7 +185,8 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
   </div>
   <div class="hdr-right">
     <span id="last-update">Carregando…</span>
-    <button class="btn-ref" id="refresh" onclick="loadData()">↺ Atualizar</button>
+    <button class="btn-ref import-button" id="import-workbook" onclick="chooseWorkbook()" title="Selecione o Excel para atualizar as cinco abas neste navegador">↑ Atualizar da planilha</button>
+    <button class="btn-ref" id="refresh" onclick="loadData(true)" title="Recarregar os dados publicados para toda a equipe">↺ Versão publicada</button>
   </div>
 </header>
 
@@ -211,6 +213,8 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
 </nav>
 
 <main class="main">
+<input type="file" id="workbook-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="const file=this.files[0];this.value='';importWorkbook(file)">
+<div class="import-feedback"><p id="import-status" role="status" aria-live="polite" hidden></p><button id="cancel-import" class="export" onclick="cancelWorkbookImport()" hidden>Cancelar leitura</button></div>
 <h1 class="sr-only">Dashboard Ritual · Central de Contratos</h1>
 <p id="load-error" class="notice" role="alert" hidden></p>
 <p id="filter-error" class="notice" role="alert"></p>
@@ -408,6 +412,6 @@ html,body{height:100%;font-family:'Raleway',sans-serif;background:var(--cream);c
 </main>
 </div>
 
-<script src="app.js?v=20261106-3"></script>
+<script src="app.js?v=20261106-4"></script>
 </body>
 </html>

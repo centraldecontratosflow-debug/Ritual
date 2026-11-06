@@ -31,7 +31,17 @@ const expected={central:['kv-tot','47.351'],backlog:['bk-tot','1.055'],auditoria
  run("activeTab='auditoria';render()");assert.equal(get('ts-done'),'876');assert.equal(get('ts-open'),'15');
  elements.get('dt-from').value='2026-11-06';elements.get('dt-to').value='2026-01-01';run('render()');assert.match(get('filter-error'),/data inicial/);
  fail=true;await run('loadData()');assert.equal(elements.get('load-error').hidden,false);assert.equal(get('ts-total'),'891');
+ // Workbook failures preserve the current dataset; successful imports replace all five views.
+ run('clearFilter()');let importMode='error';
+ const replacement=structuredClone(data);replacement.origin='local';replacement.source='Updated.xlsx';
+ for(const ds of Object.values(replacement.datasets)){ds.rows=[structuredClone(ds.rows[0])];ds.rows[0][ds.rows[0].length-3]=2;ds.count=2;}
+ context.Worker=class{postMessage(){if(importMode==='pending')return;this.onmessage({data:importMode==='error'?{type:'error',message:'Aba obrigatória não encontrada.'}:{type:'complete',snapshot:structuredClone(replacement)}});}terminate(){}};
+ await run("importWorkbook({name:'invalid.xlsx'})");assert.equal(get('ts-total'),'891');assert.match(get('import-status'),/anteriores foram mantidos/);
+ importMode='success';await run("importWorkbook({name:'Updated.xlsx'})");
+ for(const [key,[id]]of Object.entries(expected)){run(`activeTab='${key}';render()`);assert.equal(get(id),'2',key+' import binding');}
+ assert.equal(elements.get('import-workbook').disabled,false);
+ importMode='pending';const cancelled=run("importWorkbook({name:'Cancel.xlsx'})");run('cancelWorkbookImport()');await cancelled;assert.match(get('import-status'),/Leitura cancelada/);assert.equal(get('analitico-total'),'2');
  assert.ok(!html.includes('URL_GAS')&&!html.includes('DEMO'));
  const publicJson=JSON.stringify(data);for(const token of ['CpfProspect','IdCasal','ChaveProposta','PROSPECT'])assert.ok(!publicJson.includes(token),'Unexpected personal column '+token);
- console.log('PASS: 5 source totals, amount reconciliation, 5 date filters, 5 empty states, reset, invalid range, loading failure, and public aggregate schema.');
+ console.log('PASS: source totals, amount reconciliation, date filters, empty/reset/error states, atomic five-tab workbook import, cancellation, and public aggregate schema.');
 })().catch(e=>{console.error(e);process.exit(1)});

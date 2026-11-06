@@ -11,7 +11,23 @@ python scripts/extract_workbook.py /caminho/Dashboard_Backlog_Central_de_Contrat
 node scripts/verify_dashboard.cjs
 ```
 
-Publique `index.html`, `app.js` e `data.json` na mesma pasta do GitHub Pages. Não publique a planilha original: `data.json` contém somente agregados por data, sala e categorias necessárias ao painel. Nomes de clientes, CPF, documentos, identificadores e observações livres são excluídos. O botão Atualizar recarrega o snapshot publicado; alterações no Excel exigem nova extração e publicação.
+Publique `index.html`, `app.js` e `data.json` na mesma pasta do GitHub Pages. Não publique a planilha original: `data.json` contém somente agregados por data, sala e categorias necessárias ao painel. Nomes de clientes, CPF, documentos, identificadores e observações livres são excluídos. O botão Versão publicada recarrega o snapshot público; alterações compartilhadas com toda a equipe exigem nova extração e publicação.
+
+## Atualizar pelo botão no dashboard
+
+Clique em **Atualizar da planilha** e selecione o arquivo `.xlsx` salvo no computador. O painel identifica as cinco abas e seus cabeçalhos, valida as colunas e recalcula automaticamente os indicadores, gráficos e filtros. A leitura ocorre em um Web Worker para manter a interface disponível. Use **Cancelar leitura** para interromper arquivos demorados. Se houver falha ou faltar uma aba obrigatória, os dados anteriores são mantidos.
+
+O arquivo original é processado no navegador e não é enviado ao GitHub. Somente os agregados do dashboard são salvos no IndexedDB desse navegador, quando disponível. Essa cópia é restaurada ao reabrir a página. Em navegação privada ou com armazenamento indisponível, ela vale apenas enquanto a página estiver aberta. **Versão publicada** descarta a cópia importada e recarrega a base pública. Para ler alterações posteriores do Excel, clique novamente em **Atualizar da planilha** e selecione a nova versão salva do arquivo.
+
+A importação não publica alterações para outros computadores ou usuários. A atualização compartilhada no GitHub Pages continua seguindo o processo de extração e publicação acima. Não existe acesso direto do site ao caminho `C:\\Users\\...`; a seleção do arquivo é necessária. A importação lê os valores de fórmulas salvos pelo Excel e não executa macros.
+
+São aceitos os nomes de abas originais e os aliases Backlog, Central, Auditoria TS e Vendas. As colunas podem mudar de ordem; os cabeçalhos devem permanecer reconhecíveis nas primeiras 20 linhas. A dependência de leitura SheetJS CE 0.20.3 está hospedada em `vendor/`, com sua licença. Para publicar o botão, inclua também `workbook-worker.js`, `vendor/xlsx.mini.min.js` e `vendor/SHEETJS-LICENSE`.
+
+Para comparar a leitura do navegador com os dados publicados:
+
+```bash
+node scripts/verify_workbook_import.cjs /caminho/da/planilha_original.xlsx
+```
 
 ## Definições
 
